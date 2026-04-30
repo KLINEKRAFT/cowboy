@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0e0b08">
+<title>COWBOY / AR — KLINEKRAFT</title>
+
+<meta property="og:title" content="Cowboy AR">
+<meta property="og:description" content="Place a cowboy in your world. Tap, scan, summon.">
+<meta property="og:type" content="website">
+
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Rye&display=swap" rel="stylesheet">
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-deep:    #0e0b08;
+    --bg-mid:     #1a1410;
+    --bg-warm:    #251a12;
+    --ink:        #f4ead8;
+    --ink-dim:    #a89784;
+    --ink-faint:  #6b5d4f;
+    --accent:     #c8351f;
+    --accent-hot: #e84a30;
+    --gold:       #d4a253;
+    --rule:       #3a2d22;
+    --grit:       url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.96  0 0 0 0 0.92  0 0 0 0 0.85  0 0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
+  html, body {
+    background: var(--bg-deep);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    overflow-x: hidden;
+    min-height: 100vh;
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background:
+      radial-gradient(ellipse at top, rgba(200, 53, 31, 0.08), transparent 60%),
+      radial-gradient(ellipse at bottom right, rgba(212, 162, 83, 0.05), transparent 50%),
+      var(--bg-deep);
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: var(--grit);
+    background-size: 200px;
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 1;
+    mix-blend-mode: overlay;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 3px
+    );
+    pointer-events: none;
+    z-index: 2;
+    mix-blend-mode: multiply;
+  }
+
+  .frame {
+    position: relative;
+    z-index: 3;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem 1.25rem 3rem;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+
+  .nav .brand { color: var(--ink); font-weight: 700; }
+  .nav .meta { display: flex; gap: 1.25rem; }
+  .nav .meta span::before { content: '○ '; color: var(--accent); }
+
+  .hero {
+    padding: 2rem 0 1.5rem;
+    text-align: center;
+  }
+
+  .eyebrow {
+    font-size: 0.7rem;
+    letter-spacing: 0.4em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    display: inline-block;
+    padding: 0.35rem 0.9rem;
+    border: 1px solid var(--rule);
+    border-radius: 100px;
+  }
+
+  h1 {
+    font-family: 'Rye', serif;
+    font-size: clamp(3rem, 12vw, 7rem);
+    line-height: 0.9;
+    color: var(--ink);
+    text-shadow: 3px 3px 0 var(--accent), 6px 6px 0 var(--bg-warm);
+    letter-spacing: 0.02em;
+    margin-bottom: 0.5rem;
+  }
+
+  .sub {
+    font-size: 0.85rem;
+    color: var(--ink-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 1rem;
+  }
+
+  .sub::before, .sub::after { content: '— '; color: var(--accent); }
+  .sub::after { content: ' —'; }
+
+  .stage {
+    position: relative;
+    flex: 1;
+    min-height: 55vh;
+    margin: 1rem 0 0;
+    border: 1px solid var(--rule);
+    background: radial-gradient(circle at center, var(--bg-warm) 0%, var(--bg-mid) 50%, var(--bg-deep) 100%);
+    overflow: hidden;
+  }
+
+  .stage::before {
+    content: 'LIVE / 3D';
+    position: absolute;
+    top: 1rem; left: 1rem; z-index: 5;
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    color: var(--accent);
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--accent);
+    background: rgba(14, 11, 8, 0.7);
+    backdrop-filter: blur(4px);
+  }
+
+  /* Now-playing badge */
+  .now-playing {
+    position: absolute;
+    top: 1rem; right: 1rem; z-index: 5;
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    color: var(--gold);
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--gold);
+    background: rgba(14, 11, 8, 0.7);
+    backdrop-filter: blur(4px);
+    text-transform: uppercase;
+  }
+
+  .now-playing::before {
+    content: '▸ ';
+  }
+
+  .stage .bracket {
+    position: absolute;
+    width: 24px; height: 24px;
+    border-color: var(--gold);
+    z-index: 4;
+    pointer-events: none;
+  }
+  .bracket.tl { top: 8px; left: 8px; border-top: 2px solid; border-left: 2px solid; }
+  .bracket.tr { top: 8px; right: 8px; border-top: 2px solid; border-right: 2px solid; }
+  .bracket.bl { bottom: 8px; left: 8px; border-bottom: 2px solid; border-left: 2px solid; }
+  .bracket.br { bottom: 8px; right: 8px; border-bottom: 2px solid; border-right: 2px solid; }
+
+  model-viewer {
+    width: 100%;
+    height: 100%;
+    min-height: 55vh;
+    background: transparent;
+    --poster-color: transparent;
+  }
+
+  .loader {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    color: var(--ink-dim);
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    z-index: 6;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+  model-viewer[loaded] + .loader { opacity: 0; }
+
+  .loader-bar {
+    width: 200px; height: 2px;
+    background: var(--rule);
+    overflow: hidden;
+    position: relative;
+  }
+  .loader-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    animation: load-sweep 1.5s ease-in-out infinite;
+  }
+  @keyframes load-sweep {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* CONTROL PANELS */
+  .panel {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    background: rgba(26, 20, 16, 0.6);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+  }
+
+  .panel-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .panel-label .count {
+    color: var(--ink-faint);
+    font-size: 0.6rem;
+  }
+
+  .btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .ctrl-btn {
+    flex: 1 1 auto;
+    min-width: 110px;
+    padding: 0.85rem 1rem;
+    background: var(--bg-mid);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+  }
+
+  .ctrl-btn:hover {
+    background: var(--bg-warm);
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  .ctrl-btn.active {
+    background: var(--accent);
+    color: var(--ink);
+    border-color: var(--accent-hot);
+  }
+
+  .ctrl-btn .glyph {
+    margin-right: 0.4rem;
+    color: var(--gold);
+  }
+  .ctrl-btn.active .glyph { color: var(--ink); }
+
+  /* Speak buttons styled slightly different */
+  .ctrl-btn.speak {
+    background: transparent;
+    border: 1px dashed var(--rule);
+    text-align: left;
+    padding: 0.75rem 0.85rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-transform: none;
+    font-weight: 400;
+    color: var(--ink-dim);
+    line-height: 1.4;
+    min-height: 56px;
+  }
+
+  .ctrl-btn.speak::before {
+    content: '◌ ';
+    color: var(--accent);
+    margin-right: 0.3rem;
+  }
+
+  .ctrl-btn.speak:hover {
+    border-color: var(--accent);
+    color: var(--ink);
+    background: rgba(200, 53, 31, 0.05);
+  }
+
+  .speak-pending {
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: var(--ink-faint);
+    text-align: center;
+    padding: 1rem;
+    text-transform: uppercase;
+    font-style: italic;
+  }
+
+  /* AR ZONE */
+  .ar-zone {
+    text-align: center;
+    margin-top: 1.5rem;
+  }
+
+  .ar-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.85rem;
+    background: var(--accent);
+    color: var(--ink);
+    padding: 1.1rem 2.5rem;
+    border: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.15s ease, background 0.15s ease;
+    box-shadow: 4px 4px 0 var(--bg-warm), 4px 4px 0 1px var(--rule);
+  }
+
+  .ar-button:hover, .ar-button:active {
+    transform: translate(-2px, -2px);
+    background: var(--accent-hot);
+    box-shadow: 6px 6px 0 var(--bg-warm), 6px 6px 0 1px var(--rule);
+  }
+
+  .ar-hint {
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-top: 1.25rem;
+  }
+
+  footer {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+    text-align: center;
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  footer a { color: var(--gold); text-decoration: none; }
+  footer a:hover { color: var(--accent); }
+
+  @media (max-width: 600px) {
+    .frame { padding: 1rem 0.75rem 2rem; }
+    .nav { font-size: 0.6rem; }
+    .nav .meta { gap: 0.75rem; }
+    .hero { padding: 1rem 0; }
+    .stage { min-height: 50vh; }
+    model-viewer { min-height: 50vh; }
+    .ctrl-btn { min-width: 0; flex: 1 1 calc(50% - 0.25rem); }
+    .ar-button { padding: 1rem 2rem; font-size: 0.75rem; letter-spacing: 0.15em; }
+  }
+</style>
+</head>
+<body>
+
+<div class="frame">
+
+  <nav class="nav">
+    <span class="brand">KLINEKRAFT</span>
+    <div class="meta">
+      <span>EST 2025</span>
+      <span>NO. 04</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <span class="eyebrow">Augmented Reality / Beta</span>
+    <h1>COWBOY</h1>
+    <p class="sub">Drag · Pinch · Tap to summon</p>
+  </section>
+
+  <div class="stage">
+    <div class="bracket tl"></div>
+    <div class="bracket tr"></div>
+    <div class="bracket bl"></div>
+    <div class="bracket br"></div>
+
+    <div class="now-playing" id="now-playing">IDLE</div>
+
+    <model-viewer
+      id="cowboy"
+      src="cowboy.glb"
+      ios-src="cowboy.usdz"
+      alt="An animated 3D cowboy character"
+      camera-controls
+      touch-action="pan-y"
+      auto-rotate
+      auto-rotate-delay="3000"
+      rotation-per-second="15deg"
+      camera-orbit="0deg 85deg auto"
+      field-of-view="30deg"
+      shadow-intensity="1.2"
+      shadow-softness="0.8"
+      exposure="1.1"
+      environment-image="neutral"
+      animation-name="Idle"
+      autoplay
+      ar
+      ar-modes="quick-look scene-viewer webxr"
+      ar-scale="auto"
+      ar-placement="floor"
+      loading="eager">
+
+      <button slot="ar-button" class="ar-button">
+        <span>◈</span>
+        <span>VIEW IN AR</span>
+      </button>
+
+    </model-viewer>
+
+    <div class="loader" id="loader">
+      <div>SUMMONING COWBOY</div>
+      <div class="loader-bar"></div>
+      <div id="progress">0%</div>
+    </div>
+  </div>
+
+  <!-- ANIMATION CONTROLS -->
+  <div class="panel">
+    <div class="panel-label">
+      <span>◇ Animations</span>
+      <span class="count">5 / 5 LOADED</span>
+    </div>
+    <div class="btn-row" id="anim-row">
+      <button class="ctrl-btn active" data-anim="Idle"><span class="glyph">◯</span>Idle</button>
+      <button class="ctrl-btn" data-anim="Wave"><span class="glyph">▲</span>Wave</button>
+      <button class="ctrl-btn" data-anim="Excited"><span class="glyph">✦</span>Excited</button>
+      <button class="ctrl-btn" data-anim="Walk"><span class="glyph">▶</span>Walk</button>
+      <button class="ctrl-btn" data-anim="Dance"><span class="glyph">◈</span>Dance</button>
+    </div>
+  </div>
+
+  <!-- VOICE LINES (placeholder until audio added) -->
+  <div class="panel">
+    <div class="panel-label">
+      <span>◇ Voice Lines</span>
+      <span class="count">AUDIO PENDING</span>
+    </div>
+    <div class="speak-pending">
+      Sam Elliott voice incoming · Drop the audio files in /audio and<br>
+      uncomment the speak buttons in index.html
+    </div>
+    <!--
+    <div class="btn-row">
+      <button class="ctrl-btn speak" data-audio="audio/howdy.mp3">Well howdy there, partner. Welcome to KLINEKRAFT.</button>
+      <button class="ctrl-btn speak" data-audio="audio/pixels.mp3">You're lookin' at a man made of pixels and pride.</button>
+      <button class="ctrl-btn speak" data-audio="audio/screen.mp3">Ain't much I can't do from inside this little screen.</button>
+      <button class="ctrl-btn speak" data-audio="audio/stories.mp3">Stick around. Got stories older than the dirt under my boots.</button>
+      <button class="ctrl-btn speak" data-audio="audio/farewell.mp3">Reckon it's about time I moseyed on. You take care now.</button>
+    </div>
+    -->
+  </div>
+
+  <!-- AR ZONE -->
+  <div class="ar-zone">
+    <p class="ar-hint" id="ar-hint">↑ Tap the cowboy to enter AR · iPhone & Android ↑</p>
+  </div>
+
+  <footer>
+    <p>Forged at <a href="https://colinkline.com">colinkline.com</a> · Mesh: Meshy AI · Rig: Mixamo</p>
+  </footer>
+
+</div>
+
+<script>
+  const mv = document.getElementById('cowboy');
+  const loader = document.getElementById('loader');
+  const progress = document.getElementById('progress');
+  const arHint = document.getElementById('ar-hint');
+  const nowPlaying = document.getElementById('now-playing');
+
+  // Loading progress
+  mv.addEventListener('progress', (event) => {
+    const pct = Math.round(event.detail.totalProgress * 100);
+    progress.textContent = pct + '%';
+    if (pct >= 100) {
+      setTimeout(() => loader.style.display = 'none', 300);
+    }
+  });
+
+  // AR support
+  mv.addEventListener('load', () => {
+    console.log('Available animations:', mv.availableAnimations);
+    if (mv.canActivateAR) {
+      arHint.textContent = '↑ Tap VIEW IN AR · place him in your room ↑';
+    } else {
+      arHint.textContent = 'Open this page on iPhone or Android for AR';
+      arHint.style.color = 'var(--gold)';
+    }
+  });
+
+  // ANIMATION SWITCHING
+  const animBtns = document.querySelectorAll('[data-anim]');
+  animBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const anim = btn.dataset.anim;
+      mv.animationName = anim;
+      mv.play({ repetitions: Infinity });
+      
+      // Update active button
+      animBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      // Update now-playing badge
+      nowPlaying.textContent = anim.toUpperCase();
+    });
+  });
+
+  // VOICE LINES (when audio added)
+  let currentAudio = null;
+  document.querySelectorAll('[data-audio]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+      }
+      const audio = new Audio(btn.dataset.audio);
+      currentAudio = audio;
+      audio.play().catch(err => {
+        console.error('Audio play failed:', err);
+      });
+      
+      // Visual feedback
+      btn.style.borderColor = 'var(--accent)';
+      audio.addEventListener('ended', () => {
+        btn.style.borderColor = '';
+      });
+    });
+  });
+</script>
+
+</body>
+</html>
